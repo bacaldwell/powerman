@@ -12,7 +12,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %if 0%{?rhel}
 %define _with_httppower 1
 %define _with_snmppower 1
-%define _with_genders 0
+%define _with_genders 1
 %define _with_tcp_wrappers 1
 %endif
 
@@ -41,6 +41,12 @@ BuildRequires: curl-devel
 %endif
 %if 0%{?_with_snmppower}
 BuildRequires: net-snmp-devel
+%endif
+
+%if "%{?dist}" == ".el7"
+%define _initscript /usr/lib/systemd/system/powerman.service
+%else
+%define _initscript %{_sysconfdir}/init.d/powerman
 %endif
 
 %package devel
@@ -84,20 +90,33 @@ make install DESTDIR=$RPM_BUILD_ROOT
 rm -rf $RPM_BUILD_ROOT
 
 %post
-if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --add powerman; fi
+if [[ "%{?dist}" =~ ".el7" ]]; then
+  /bin/systemctl enable powerman > /dev/null 2>&1 ||:
+else
+  if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --add powerman; fi
+fi
 
 %post libs
 if [ -x /sbin/ldconfig ]; then /sbin/ldconfig %{_libdir}; fi
 
 %preun
 if [ "$1" = 0 ]; then
-  %{_sysconfdir}/init.d/powerman stop >/dev/null 2>&1 || :
-  if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --del powerman; fi
+  if [[ "%{?dist}" =~ ".el7" ]]; then
+    systemctl stop powerman >/dev/null 2>&1 || :
+    systemctl disable powerman > /dev/null 2>&1 || :
+  else
+    %{_sysconfdir}/init.d/powerman stop >/dev/null 2>&1 || :
+    if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --del powerman; fi
+  fi
 fi
 
 %postun
 if [ "$1" -ge 1 ]; then
-  %{_sysconfdir}/init.d/powerman condrestart >/dev/null 2>&1 || :
+  if [[ "%{?dist}" =~ ".el7" ]]; then
+    systemctl try-restart powerman >/dev/null 2>&1 || :
+  else
+    %{_sysconfdir}/init.d/powerman condrestart >/dev/null 2>&1 || :
+  fi
 fi
 
 %postun libs
@@ -127,7 +146,7 @@ if [ -x /sbin/ldconfig ]; then /sbin/ldconfig %{_libdir}; fi
 %{_mandir}/*5/*
 %{_mandir}/*8/*
 %{_libdir}/stonith/plugins/external/powerman
-%{_sysconfdir}/init.d/powerman
+%{_initscript}
 %dir %attr(0755,daemon,root) %config %{_localstatedir}/run/powerman
 
 %files devel
@@ -150,6 +169,8 @@ if [ -x /sbin/ldconfig ]; then /sbin/ldconfig %{_libdir}; fi
 %endif
 
 %changelog
+* Wed Jan 28 2015 Blake Caldwell <blakec@ornl.gov>
+- Changes for building with RHEL7 and systemd
 
 * Tue Feb 14 2006 Ben Woodard <woodard@redhat.com> 1.0.22-3
 - Changed /usr/bin to bindir

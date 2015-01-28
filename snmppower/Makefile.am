@@ -1,8 +1,8 @@
 AM_CFLAGS = @GCCWARN@
 
-AM_CPPFLAGS = -I$(top_srcdir)/libcommon
+AM_CPPFLAGS = -I$(top_srcdir)/libcommon -L$(LIBNETSNMP)
 
 sbin_PROGRAMS = snmppower
 
 snmppower_SOURCES = snmppower.c
-snmppower_LDADD = $(top_builddir)/libcommon/libcommon.a $(LIBSNMP) $(LIBFORKPTY)
+snmppower_LDADD = $(top_builddir)/libcommon/libcommon.a $(LIBNETSNMP) $(LIBFORKPTY)

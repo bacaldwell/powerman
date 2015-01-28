@@ -69,4 +69,5 @@ powermand/parse_tab.c
 powermand/parse_tab.h
 powermand/powermand
 scripts/powerman
+scripts/powerman.service
 test/vpcd
